@@ -1,7 +1,9 @@
 #! /usr/bin/python3
 #
 # Author steggy
-# ver 1.7.
+# ver 0.1
+# Basic editing of isc-kea reservations
+
 
 import os
 import sys
@@ -93,11 +95,16 @@ def parse_reservation(resv):
 
 
 def parse_single(record):
-    print(record)
-    print(record['hostname'])
-    for key in record:
-        print(key, "->", record[key])
-
+    print('Hostname: ', record['hostname'])
+    print('MAC: ', record['hw-address'])
+    print('IP: ', record['ip-address'])
+    #print(record['option-data'][1])
+    for i in record['option-data']:
+        print(i['name'], i['data'])
+        #for key in i:
+        #    printf(key, "->", i[key], end =" ")
+    ui = input('Edit record? y/n: ')
+    return ui
 
 
 def list_reservations(resv):
@@ -111,27 +118,41 @@ def list_reservations(resv):
     number_of_rows = len(x)
     rows_read = 0
     for idx,row in enumerate(x):
-        print(f"{idx}) {row['hostname']}")
+        #print(Fore.LIGHTWHITE_EX + "{: <20}  {: <20} {: <20}".format(*i))
+        print(f"{str(idx).rjust(3, ' ')}) {str(row['hostname']).ljust(25, ' ')} {row['ip-address']}")
         #print(rows_read % 10)
-        if rows_read > 0 and rows_read % 10 == 0:
-            ui = input('*******************************\nEnter number to view\nEnter to continue\n q to quit: ')
+        if rows_read > 0 and rows_read % 20 == 0:
+            ui = input(f'{"*" * 55}\n * Number to view\n * "Enter/Return" to continue\n * "q" to quit:\n ')
             if ui == 'q':
                 break
             if ui:
                 try:
                     num = int(ui)
                     clears()
-                    parse_single(x[num])
-                    #print(x[num])
+                    ui = parse_single(x[num])
+                    if ui.lower() == 'y':
+                        print(x[num]['hostname'])
+                        edit_record(resv,x[num]['hostname']) 
                     break
-                except:
+                except Exceptions as e:
                     print('Need a number')
+                    print(e)
             
         # do stuff with each row
         rows_read += 1
     
     # do something else after 10 rows are read
     rows_read = 0
+
+
+
+def edit_record(resv,host):
+    #print(resv)
+    #print(resv['Dhcp4']['reservations']['hostname'])
+    for idx,rec in enumerate(resv['Dhcp4']['reservations']):
+        if rec['hostname'] == host:
+            print(idx)
+
 
 def main():
     global keajson
