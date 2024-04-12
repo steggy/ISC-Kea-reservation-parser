@@ -11,6 +11,7 @@ import json
 import requests
 import pprint
 import platform
+import socket
 
 headers = {
     'Content-Type': 'application/json',
@@ -94,6 +95,14 @@ def parse_reservation(resv):
     write_json(resv)
 
 
+def valid_ip(ip):
+    try:
+        socket.inet_aton(ip)
+        return 0
+    except socket.error:
+        return 1
+
+
 def parse_single(record):
     print('Hostname: ', record['hostname'])
     print('MAC: ', record['hw-address'])
@@ -149,19 +158,49 @@ def list_reservations(resv):
 
 
 def edit_record(resv,host,num):
+    store = {'hostname':'','mac':'','ip':'','domain-name-servers':'','domain-name':'','broadcast-address':'','subnet-mask':'','routers':'','host-name':''}
     for idx,rec in enumerate(resv['Dhcp4']['reservations']):
         if rec['hostname'] == host:
             print(idx)
     obj = list(enumerate(resv['Dhcp4']['reservations']))
+    store['hostname'] = obj[1][num]['hostname']        
+    store['mac'] = obj[num][1]['hw-address']
+    store['ip'] = obj[num][1]['ip-address']
+
+    #print(len(list(obj[num])[1]['option-data']))
+    for i in list(obj[num])[1]['option-data']:
+            #print(i['name'])
+            store[i['name']] = i['data']
+            #if i['name'] == 'domain-name':
+            #    print(i['data'])
+    
+    print(store)
     while True:
-        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer [r]eminder [c]olor [d]escr:")
-        if res.lower() == 'q':
+        
+        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer [m]ask [b]road-cast domain-[n]ame-server [d]omain-name:")
+        res = res.lower()
+        if res == 'q':
             break
+        if res == 'i':
+            n = 'ip'
+            print(store[n])
+            v = get_edit_input(n)
+            if valid_ip(v) == 1:
+                print('Need valid IP')
+            store[n] = v    
+        if res.lower() == 'd':
+            n = 'domain-name'
+            print(store[n])
+            v = get_edit_input(n)
         #list(obj[num])[1]['hostname'] = 'wled2fred'
-        print(list(obj[num])[1]['hostname'])
         #write_json(resv)
         #print(obj[num].hostname)
         #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
+
+def get_edit_input(key):
+    res = input(f'Enter new value for {key}:\n')
+    return res
+
 
 def main():
     global keajson
