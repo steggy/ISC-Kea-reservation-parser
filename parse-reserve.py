@@ -7,9 +7,9 @@
 
 import os, sys, re, json, requests, platform, socket 
 import pprint
+from valid import *
 
-
-
+title = 'Basic isc-kea reservation editing'
 headers = {
     'Content-Type': 'application/json',
 }
@@ -33,12 +33,7 @@ json_data2 = {
 
 
 
-def clears():
-# Clears the on-screen display  
-    if platform.system() == 'Windows':
-      os.system('cls')
-    else:
-      os.system('clear')
+
 
 
 
@@ -70,9 +65,7 @@ def write_json(res):
         json.dump(res, file, indent=4)
 
 
-def restart():
-    clears()
-    os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
+
 
 def parse_reservation(resv):
     #print(res['Dhcp4']['reservations'])
@@ -98,30 +91,11 @@ def parse_reservation(resv):
     write_json(resv)
 
 
-def is_valid_ip(ip):
-    try:
-        socket.inet_aton(ip)
-        return 0
-    except socket.error:
-        return 1
-
-def is_valid_mac(value):
-    allowed = re.compile(r"""
-                         (
-                             ^([0-9A-F]{2}[-]){5}([0-9A-F]{2})$
-                            |^([0-9A-F]{2}[:]){5}([0-9A-F]{2})$
-                         )
-                         """,
-                         re.VERBOSE|re.IGNORECASE)
-
-    if allowed.match(value) is None:
-        return 
-    else:
-        return True 
 
 
 def parse_single(record):
     pad = 20
+    print('\n\n')
     print(f"{str('Hostname').ljust(pad,' ')}:{record['hostname']}")
     print(f"{str('MAC').ljust(pad, ' ')}:{record['hw-address']}")
     print(f"{str('IP').ljust(pad, ' ')}:{record['ip-address']}")
@@ -130,39 +104,27 @@ def parse_single(record):
         print(f"{str(i['name']).ljust(pad,' ')}:{i['data']}")
         #for key in i:
         #    printf(key, "->", i[key], end =" ")
-    print(f"{'=' * 15}")    
+    print(f"{'=' * 30}")    
     ui = input('Edit record? y/n: ')
     return ui
 
 
 def list_reservations(resv):
     x = resv['Dhcp4']['reservations']
-    #print(resv['Dhcp4']['reservations'])
-    #print(len(x))
-    #for i in x[0:9]:
-    #    #print(i['hostname'])
-    #    pass
-    
-
-    #number_of_rows = len(x)
     rows_read = 0
     for idx,row in enumerate(x):
-        #print(Fore.LIGHTWHITE_EX + "{: <20}  {: <20} {: <20}".format(*i))
         print(f"{str(idx).rjust(3, ' ')}) {str(row['hostname']).ljust(25, ' ')} {row['ip-address']}")
-        #print(rows_read % 10)
         if rows_read > 0 and rows_read % 20 == 0 or rows_read == len(x) - 1:
             ui = input(f'{"*" * 55}\n * Number to view\n * "Enter/Return" to continue\n * "s" to start from top\n * "q" to quit:\n ')
             ui = ui.lower()
             if ui == 'q':
                 quit()
             if ui == 's':
-                #return 'restart'
                 clears()
                 list_reservations(resv)
             if not ui == '':
                 try:
                     num = int(ui)
-                    
                 except Exception as e:
                     print('Need a number')
                     print(e)
@@ -197,11 +159,22 @@ def edit_record(resv,host,num):
             store[i['name']] = i['data']
             #if i['name'] == 'domain-name':
             #    print(i['data'])
-    
+
+    # Check for host-name in option-data
+    hashost = 0
+    for i in obj[num][1]['option-data']:
+        print(i)
+        if i['name'] == 'host-name':
+            hashost = 1
+            break
+    if hashost == 0:
+        print('NO HOST')
+        obj[num][1]['option-data'].append({'space': 'dhcp4', 'name': 'host-name', 'code': 12, 'data': ''})
+        store['host-name'] = store['hostname']
     print('store',store)
     while True:
         
-        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer mas[k] [b]road-cast domain-[n]ame-server [d]omain-name:")
+        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer mas[k] [b]road-cast domain-[n]ame-server [d]omain-name sho[w]-record:\n")
         res = res.lower()
         if res == 'q':
             break
@@ -209,14 +182,42 @@ def edit_record(resv,host,num):
             n = 'ip'
             print(store[n])
             v = get_edit_input(n)
-            if is_valid_ip(v) == 1:
+            if not is_valid_ip(v):
                 print('Need valid IP')
                 continue
             store[n] = v    
-        if res.lower() == 'd':
+        if res == 'b':
+            n = 'broadcast-address'
+            print(store[n])
+            v = get_edit_input(n)
+            if not is_valid_ip(v):
+                print('Need valid IP')
+                continue
+            store[n] = v    
+        if res == 'r':
+            n = 'routers'
+            print(store[n])
+            v = get_edit_input(n)
+            if not is_valid_ip(v):
+                print('Need valid IP')
+                continue
+            store[n] = v    
+        if res == 'd':
             n = 'domain-name'
             print(store[n])
             v = get_edit_input(n)
+            store[n] = v
+        if res == 'h':
+            n = 'hostname'
+            print(store[n])
+            v = get_edit_input(n)
+            if not is_valid_hostname(v):
+                store[n] = v
+                n = 'host-name'
+                store[n] = v
+            else:
+                print('Spaces not allowed in hostname')
+            
         if res == 'm':
             n = 'mac'
             print(store[n])
@@ -225,27 +226,46 @@ def edit_record(resv,host,num):
                 print('Need valid mac format[00:00:00:00:00:00]')
             v = v.replace('-', ':')
             print(v)
+            store[n] = v
+        if res == 'n':
+            n = 'domain-name-servers'
+            print(store[n])
+            v = get_edit_input(n)
+            store[n] = v
+        if res == 'w':
+            show_store_dict(store)
         if res == 'k':
             n = 'subnet-mask'
             print(store[n])
             v = get_edit_input(n)
-            if is_valid_ip(v) == 1:
+            if not is_valid_ip(v):
                 print('Need valid IP')
                 continue
             store[n] = v    
                       
         if res == 's':
-            print('Saving Record')
-            obj[num][1]['ip-address'] = store['ip']
-            #list(obj[num])[1]['hostname'] = 'wled2fred'
-            write_json(resv)
+            show_store_dict(store)
+            answer = get_user_input("Are you sure you want to save?\ny to save\nEnter/Return to continue\n" )
+            if answer.lower() == 'y':
+                print('Saving Record')
+                obj[num][1]['ip-address'] = store['ip']
+                #list(obj[num])[1]['hostname'] = 'wled2fred'
+                #write_json(resv)
         #print(obj[num].hostname)
         #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
+
+
+def show_store_dict(dict):
+    for key in dict:
+        print(f"{str(key).ljust(20, ' ')}:{dict[key]}")
 
 def get_edit_input(key):
     res = input(f'Enter new value for {key}:\n')
     return res
 
+def get_user_input(prompt):
+    res = input(prompt)
+    return res
 
 def main():
     global keajson
@@ -257,11 +277,21 @@ def main():
     res = get_file()
     #parse_reservation(res)
     clears()
-    stat = list_reservations(res)
-    if stat == 'restart':
-        restart()
-    if stat == 'q':
-        quit()
+    while True:
+        print(title)
+        answer = get_user_input(f"\n'l' for list edit\n's' for search\n'a' for add\n'q' for quit")
+        if answer == 'l':
+            stat = list_reservations(res)
+            if stat == 'q':
+                quit()
+        if answer == 's':
+            #search
+            pass
+        if answer == 'a':
+            #add record
+            pass
+        if answer == 'q':
+            quit()
 
 
 
