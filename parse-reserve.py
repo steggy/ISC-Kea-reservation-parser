@@ -110,12 +110,13 @@ def parse_single(record):
 def list_reservations(resv):
     x = resv['Dhcp4']['reservations']
     #print(resv['Dhcp4']['reservations'])
-    print(len(x))
-    for i in x[0:9]:
-        #print(i['hostname'])
-        pass
+    #print(len(x))
+    #for i in x[0:9]:
+    #    #print(i['hostname'])
+    #    pass
     
-    number_of_rows = len(x)
+
+    #number_of_rows = len(x)
     rows_read = 0
     for idx,row in enumerate(x):
         #print(Fore.LIGHTWHITE_EX + "{: <20}  {: <20} {: <20}".format(*i))
@@ -131,10 +132,11 @@ def list_reservations(resv):
                     clears()
                     ui = parse_single(x[num])
                     if ui.lower() == 'y':
-                        print(x[num]['hostname'])
-                        edit_record(resv,x[num]['hostname']) 
-                    break
-                except Exceptions as e:
+                        #print(x[num]['hostname'])
+                        edit_record(resv,x[num]['hostname'],num) 
+                    #break
+                    clears()
+                except Exception as e:
                     print('Need a number')
                     print(e)
             
@@ -146,13 +148,20 @@ def list_reservations(resv):
 
 
 
-def edit_record(resv,host):
-    #print(resv)
-    #print(resv['Dhcp4']['reservations']['hostname'])
+def edit_record(resv,host,num):
     for idx,rec in enumerate(resv['Dhcp4']['reservations']):
         if rec['hostname'] == host:
             print(idx)
-
+    obj = list(enumerate(resv['Dhcp4']['reservations']))
+    while True:
+        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer [r]eminder [c]olor [d]escr:")
+        if res.lower() == 'q':
+            break
+        #list(obj[num])[1]['hostname'] = 'wled2fred'
+        print(list(obj[num])[1]['hostname'])
+        #write_json(resv)
+        #print(obj[num].hostname)
+        #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
 
 def main():
     global keajson
