@@ -5,13 +5,10 @@
 # Basic editing of isc-kea reservations
 
 
-import os
-import sys
-import json
-import requests
+import os, sys, re, json, requests, platform, socket 
 import pprint
-import platform
-import socket
+
+
 
 headers = {
     'Content-Type': 'application/json',
@@ -65,11 +62,17 @@ def get_file():
     else:
         with open(keajson) as f:
             d = json.load(f)
+            f.close()
     return d
 
 def write_json(res):
     with open('data.json', 'w') as file:
         json.dump(res, file, indent=4)
+
+
+def restart():
+    clears()
+    os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
 
 def parse_reservation(resv):
     #print(res['Dhcp4']['reservations'])
@@ -95,23 +98,39 @@ def parse_reservation(resv):
     write_json(resv)
 
 
-def valid_ip(ip):
+def is_valid_ip(ip):
     try:
         socket.inet_aton(ip)
         return 0
     except socket.error:
         return 1
 
+def is_valid_mac(value):
+    allowed = re.compile(r"""
+                         (
+                             ^([0-9A-F]{2}[-]){5}([0-9A-F]{2})$
+                            |^([0-9A-F]{2}[:]){5}([0-9A-F]{2})$
+                         )
+                         """,
+                         re.VERBOSE|re.IGNORECASE)
+
+    if allowed.match(value) is None:
+        return 
+    else:
+        return True 
+
 
 def parse_single(record):
-    print('Hostname: ', record['hostname'])
-    print('MAC: ', record['hw-address'])
-    print('IP: ', record['ip-address'])
+    pad = 20
+    print(f"{str('Hostname').ljust(pad,' ')}:{record['hostname']}")
+    print(f"{str('MAC').ljust(pad, ' ')}:{record['hw-address']}")
+    print(f"{str('IP').ljust(pad, ' ')}:{record['ip-address']}")
     #print(record['option-data'][1])
     for i in record['option-data']:
-        print(i['name'], i['data'])
+        print(f"{str(i['name']).ljust(pad,' ')}:{i['data']}")
         #for key in i:
         #    printf(key, "->", i[key], end =" ")
+    print(f"{'=' * 15}")    
     ui = input('Edit record? y/n: ')
     return ui
 
@@ -131,24 +150,28 @@ def list_reservations(resv):
         #print(Fore.LIGHTWHITE_EX + "{: <20}  {: <20} {: <20}".format(*i))
         print(f"{str(idx).rjust(3, ' ')}) {str(row['hostname']).ljust(25, ' ')} {row['ip-address']}")
         #print(rows_read % 10)
-        if rows_read > 0 and rows_read % 20 == 0:
-            ui = input(f'{"*" * 55}\n * Number to view\n * "Enter/Return" to continue\n * "q" to quit:\n ')
+        if rows_read > 0 and rows_read % 20 == 0 or rows_read == len(x) - 1:
+            ui = input(f'{"*" * 55}\n * Number to view\n * "Enter/Return" to continue\n * "s" to start from top\n * "q" to quit:\n ')
+            ui = ui.lower()
             if ui == 'q':
-                break
-            if ui:
+                quit()
+            if ui == 's':
+                #return 'restart'
+                clears()
+                list_reservations(resv)
+            if not ui == '':
                 try:
                     num = int(ui)
-                    clears()
-                    ui = parse_single(x[num])
-                    if ui.lower() == 'y':
-                        #print(x[num]['hostname'])
-                        edit_record(resv,x[num]['hostname'],num) 
-                    #break
-                    clears()
+                    
                 except Exception as e:
                     print('Need a number')
                     print(e)
-            
+                clears()
+                ui = parse_single(x[num])
+                if ui.lower() == 'y':
+                    #print(x[num]['hostname'])
+                    edit_record(resv,x[num]['hostname'],num) 
+            clears() 
         # do stuff with each row
         rows_read += 1
     
@@ -163,9 +186,10 @@ def edit_record(resv,host,num):
         if rec['hostname'] == host:
             print(idx)
     obj = list(enumerate(resv['Dhcp4']['reservations']))
-    store['hostname'] = obj[1][num]['hostname']        
-    store['mac'] = obj[num][1]['hw-address']
-    store['ip'] = obj[num][1]['ip-address']
+    #print(list(obj)[num])
+    store['hostname'] = list(obj)[num][1]['hostname']        
+    store['mac'] = list(obj)[num][1]['hw-address']
+    store['ip'] = list(obj)[num][1]['ip-address']
 
     #print(len(list(obj[num])[1]['option-data']))
     for i in list(obj[num])[1]['option-data']:
@@ -174,10 +198,10 @@ def edit_record(resv,host,num):
             #if i['name'] == 'domain-name':
             #    print(i['data'])
     
-    print(store)
+    print('store',store)
     while True:
         
-        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer [m]ask [b]road-cast domain-[n]ame-server [d]omain-name:")
+        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer mas[k] [b]road-cast domain-[n]ame-server [d]omain-name:")
         res = res.lower()
         if res == 'q':
             break
@@ -185,15 +209,36 @@ def edit_record(resv,host,num):
             n = 'ip'
             print(store[n])
             v = get_edit_input(n)
-            if valid_ip(v) == 1:
+            if is_valid_ip(v) == 1:
                 print('Need valid IP')
+                continue
             store[n] = v    
         if res.lower() == 'd':
             n = 'domain-name'
             print(store[n])
             v = get_edit_input(n)
-        #list(obj[num])[1]['hostname'] = 'wled2fred'
-        #write_json(resv)
+        if res == 'm':
+            n = 'mac'
+            print(store[n])
+            v = get_edit_input(n)
+            if not is_valid_mac(v):
+                print('Need valid mac format[00:00:00:00:00:00]')
+            v = v.replace('-', ':')
+            print(v)
+        if res == 'k':
+            n = 'subnet-mask'
+            print(store[n])
+            v = get_edit_input(n)
+            if is_valid_ip(v) == 1:
+                print('Need valid IP')
+                continue
+            store[n] = v    
+                      
+        if res == 's':
+            print('Saving Record')
+            obj[num][1]['ip-address'] = store['ip']
+            #list(obj[num])[1]['hostname'] = 'wled2fred'
+            write_json(resv)
         #print(obj[num].hostname)
         #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
 
@@ -211,7 +256,12 @@ def main():
         quit()
     res = get_file()
     #parse_reservation(res)
-    list_reservations(res)
+    clears()
+    stat = list_reservations(res)
+    if stat == 'restart':
+        restart()
+    if stat == 'q':
+        quit()
 
 
 
