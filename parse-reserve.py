@@ -8,11 +8,15 @@
 import os, sys, re, json, requests, platform, socket 
 import pprint
 from valid import *
+import readwriteconfig as CF
 
-title = 'Basic isc-kea reservation editing'
+configfile = 'parse.conf'
+title = f"{'=' * 30}\nBasic isc-kea reservation editing"
+
 headers = {
     'Content-Type': 'application/json',
 }
+
 
 json_data = {
     'command': 'lease4-get-all',
@@ -35,7 +39,24 @@ json_data2 = {
 
 
 
-
+def init():
+    global configdict
+    global configlist
+    global ver 
+    
+    wd = os.path.dirname(os.path.abspath(__file__)) + '/' + configfile
+    if not is_valid_file(wd):
+        print(f"Config file {configfile} missing")
+        return 
+    try:
+        configdict = dict(CF.Config(wd).Fetch('dataoptions'))
+        configlist = list(configdict.values())
+        ver = str(CF.Config(wd).Fetch('version')[0][1])
+        return True
+    except Exception as e:
+        print(str(e))
+        return 0
+    
 
 def parse_api():
     response = requests.post('http://192.168.33.136:8000/', headers=headers, json=json_data2)
@@ -51,7 +72,7 @@ def parse_api():
 
 
 def get_file():
-    if not os.path.isfile(keajson):
+    if not is_valid_file(keajson):
         print('No file', keajson, 'Please pull new file')
         quit()
     else:
@@ -89,6 +110,29 @@ def parse_reservation(resv):
     print(x)
     print(type(x))
     write_json(resv)
+
+def search_record(resv):
+    result = []
+    query = input('Enter search:\n')
+    x = resv['Dhcp4']['reservations']
+    for idx,row in enumerate(x):
+        if query in row['hostname']:
+            #d = {idx,row['hostname']}
+            result.append([idx,row['hostname']])
+    if len(result) < 1:
+        print('Record not found')
+        return
+    for idx,val in enumerate(result):
+        print(f"{str(idx + 1).rjust(3, ' ')}) {val[1]}")
+    answer = input('Enter number to edit:\n ')
+    try:
+        num = int(answer)
+        num = num - 1
+    except:
+        print('Enter a number')
+        return 
+    print(result[num])
+    edit_record(resv,result[num][1],result[num][0])
 
 
 
@@ -139,19 +183,56 @@ def list_reservations(resv):
     
     # do something else after 10 rows are read
     rows_read = 0
+def verify_new_record_input(prompt,field,resv = ''):
+    needsdupcheck = ['hostname','ip-address','hw-address']
+    while True:
+        h = get_user_input(f"{prompt}: ")
+        if len(resv) > 0:
+            result = dup_check(resv,field,h)
+            if result:
+                print(f"{h} Already in use")
+                continue
+        if is_valid(field,h):
+            return h
+            
 
+def add_record_info(resv):
+    newstore = {}
+    newstore['hostname'] = verify_new_record_input('Hostname','hostname',resv)
+    #if answer : newstore['hostname'] = answer
 
+    answer = verify_new_record_input('IP Address','ip-address',resv)
+    if answer : newstore['ip-address'] = answer
+    
+    answer = verify_new_record_input('MAC Address','hw-address',resv)
+    if answer : newstore['hw-address'] = answer
+    print(newstore)
+    quit()
+    
+    while True:
+        h = get_user_input('MAC Adress:')
+        result = dup_check(resv,'hw-address',h)
+        if result:
+            print(f"{h} Already in use")
+        else:
+            if not is_valid_mac(h):
+                print(f"MAC {h} not valid")
+            else:
+                newstore['hw-address'] = h
+                break
+    print(newstore)
 
 def edit_record(resv,host,num):
-    store = {'hostname':'','mac':'','ip':'','domain-name-servers':'','domain-name':'','broadcast-address':'','subnet-mask':'','routers':'','host-name':''}
-    for idx,rec in enumerate(resv['Dhcp4']['reservations']):
+    #store = {'hostname':'','mac':'','ip':'','domain-name-servers':'','domain-name':'','broadcast-address':'','subnet-mask':'','routers':'','host-name':''}
+    store = {}
+    '''for idx,rec in enumerate(resv['Dhcp4']['reservations']):
         if rec['hostname'] == host:
-            print(idx)
+            print(idx)'''
     obj = list(enumerate(resv['Dhcp4']['reservations']))
     #print(list(obj)[num])
     store['hostname'] = list(obj)[num][1]['hostname']        
-    store['mac'] = list(obj)[num][1]['hw-address']
-    store['ip'] = list(obj)[num][1]['ip-address']
+    store['hw-address'] = list(obj)[num][1]['hw-address']
+    store['ip-address'] = list(obj)[num][1]['ip-address']
 
     #print(len(list(obj[num])[1]['option-data']))
     for i in list(obj[num])[1]['option-data']:
@@ -163,7 +244,7 @@ def edit_record(resv,host,num):
     # Check for host-name in option-data
     hashost = 0
     for i in obj[num][1]['option-data']:
-        print(i)
+        #print(i)
         if i['name'] == 'host-name':
             hashost = 1
             break
@@ -171,38 +252,37 @@ def edit_record(resv,host,num):
         print('NO HOST')
         obj[num][1]['option-data'].append({'space': 'dhcp4', 'name': 'host-name', 'code': 12, 'data': ''})
         store['host-name'] = store['hostname']
-    print('store',store)
+    #print('store',store)
     while True:
         
-        res = input(f"Edit?\n[s]ave [q]uit [h]ostname [i]p [m]ac [r]outer mas[k] [b]road-cast domain-[n]ame-server [d]omain-name sho[w]-record:\n")
+        res = input(f"Edit?\n[d]elete [s]ave [q]uit [h]ostname [i]p [m]ac [r]outer mas[k] [b]road-cast d[o]main-name-server [d]omain-name sho[w]-record:\n")
         res = res.lower()
         if res == 'q':
             break
         if res == 'i':
-            n = 'ip'
+            n = 'ip-address'
             print(store[n])
-            v = get_edit_input(n)
-            if not is_valid_ip(v):
-                print('Need valid IP')
-                continue
-            store[n] = v    
+            store[n] = verify_new_record_input('IP Address',n,resv)
+                
         if res == 'b':
             n = 'broadcast-address'
             print(store[n])
-            v = get_edit_input(n)
+            store[n] = verify_new_record_input('Broadcast Address','ip-address')
+            '''v = get_edit_input(n)
             if not is_valid_ip(v):
                 print('Need valid IP')
                 continue
-            store[n] = v    
+            store[n] = v'''    
         if res == 'r':
             n = 'routers'
             print(store[n])
-            v = get_edit_input(n)
+            store[n] = verify_new_record_input('Router','ip-address')
+            '''v = get_edit_input(n)
             if not is_valid_ip(v):
                 print('Need valid IP')
                 continue
-            store[n] = v    
-        if res == 'd':
+            store[n] = v'''    
+        if res == 'o':
             n = 'domain-name'
             print(store[n])
             v = get_edit_input(n)
@@ -210,23 +290,14 @@ def edit_record(resv,host,num):
         if res == 'h':
             n = 'hostname'
             print(store[n])
-            v = get_edit_input(n)
-            if not is_valid_hostname(v):
-                store[n] = v
-                n = 'host-name'
-                store[n] = v
-            else:
-                print('Spaces not allowed in hostname')
+            store['hostname'] = verify_new_record_input('Hostname',n,resv)
+            
             
         if res == 'm':
-            n = 'mac'
+            n = 'hw-address'
             print(store[n])
-            v = get_edit_input(n)
-            if not is_valid_mac(v):
-                print('Need valid mac format[00:00:00:00:00:00]')
-            v = v.replace('-', ':')
-            print(v)
-            store[n] = v
+            store[n] = verify_new_record_input('MAC',n,resv)
+            
         if res == 'n':
             n = 'domain-name-servers'
             print(store[n])
@@ -269,6 +340,9 @@ def get_user_input(prompt):
 
 def main():
     global keajson
+    intt = init()
+    if not intt:
+        quit()
     if len(sys.argv) >= 2:
         keajson = sys.argv[1] 
     else: 
@@ -279,17 +353,25 @@ def main():
     clears()
     while True:
         print(title)
-        answer = get_user_input(f"\n'l' for list edit\n's' for search\n'a' for add\n'q' for quit")
+        answer = get_user_input(f"\nchoose:\n[l]ist/edit [s]earch [a]dd [q]uit\n ")
         if answer == 'l':
             stat = list_reservations(res)
             if stat == 'q':
                 quit()
         if answer == 's':
-            #search
-            pass
+            search_record(res)  
         if answer == 'a':
+            add_record_info(res)
             #add record
-            pass
+            #print(len(res['Dhcp4']['reservations']))
+            #print(res['Dhcp4']['reservations'][*]['hostname'])
+            #quit()
+            
+            #anw = input('Enter test data\n')
+            ##tres = dup_check(res,'hostname',anw)
+            #tres = dup_check(res,'ip-address',anw)
+            #print(tres)
+            #pass
         if answer == 'q':
             quit()
 
