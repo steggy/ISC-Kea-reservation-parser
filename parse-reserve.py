@@ -118,12 +118,12 @@ def search_record(resv):
     for idx,row in enumerate(x):
         if query in row['hostname']:
             #d = {idx,row['hostname']}
-            result.append([idx,row['hostname']])
+            result.append([idx,row['hostname'],row['ip-address']])
     if len(result) < 1:
         print('Record not found')
         return
     for idx,val in enumerate(result):
-        print(f"{str(idx + 1).rjust(3, ' ')}) {val[1]}")
+        print(f"{str(idx + 1).rjust(3, ' ')}) {val[1]} {val[2]}")
     answer = input('Enter number to edit:\n ')
     try:
         num = int(answer)
@@ -319,7 +319,7 @@ def edit_record(resv,host,num):
             answer = get_user_input("Are you sure you want to save?\ny to save\nEnter/Return to continue\n" )
             if answer.lower() == 'y':
                 print('Saving Record')
-                obj[num][1]['ip-address'] = store['ip']
+                obj[num][1]['ip-address'] = store['ip-address']
                 #list(obj[num])[1]['hostname'] = 'wled2fred'
                 #write_json(resv)
         #print(obj[num].hostname)
