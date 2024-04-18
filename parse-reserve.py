@@ -8,6 +8,7 @@
 import os, sys, re, json, requests, platform, socket 
 import pprint
 from valid import *
+from option_data_valid import *
 import readwriteconfig as CF
 
 configfile = 'parse.conf'
@@ -143,11 +144,16 @@ def parse_single(record):
     print(f"{str('Hostname').ljust(pad,' ')}:{record['hostname']}")
     print(f"{str('MAC').ljust(pad, ' ')}:{record['hw-address']}")
     print(f"{str('IP').ljust(pad, ' ')}:{record['ip-address']}")
-    #print(record['option-data'][1])
-    for i in record['option-data']:
-        print(f"{str(i['name']).ljust(pad,' ')}:{i['data']}")
-        #for key in i:
-        #    printf(key, "->", i[key], end =" ")
+    # check for "option-data" in record
+    if 'option-data' in record:
+        #print(record['option-data'][1])
+        for i in record['option-data']:
+            if 'name' in i:
+                print(f"{str(i['name']).ljust(pad,' ')}:{i['data']}")
+            #for key in i:
+            #    printf(key, "->", i[key], end =" ")
+    else:
+        print('Adding "option-data" for the use of "comment" field')
     print(f"{'=' * 30}")    
     ui = input('Edit record? y/n: ')
     return ui
@@ -228,30 +234,25 @@ def edit_record(resv,host,num):
     '''for idx,rec in enumerate(resv['Dhcp4']['reservations']):
         if rec['hostname'] == host:
             print(idx)'''
+    #resv = valid_option_data(resv,num)        
+    valid_option_data(resv,num)        
     obj = list(enumerate(resv['Dhcp4']['reservations']))
     #print(list(obj)[num])
     store['hostname'] = list(obj)[num][1]['hostname']        
     store['hw-address'] = list(obj)[num][1]['hw-address']
     store['ip-address'] = list(obj)[num][1]['ip-address']
-
+    
+   
     #print(len(list(obj[num])[1]['option-data']))
     for i in list(obj[num])[1]['option-data']:
             #print(i['name'])
-            store[i['name']] = i['data']
-            #if i['name'] == 'domain-name':
-            #    print(i['data'])
-
-    # Check for host-name in option-data
-    hashost = 0
-    for i in obj[num][1]['option-data']:
-        #print(i)
-        if i['name'] == 'host-name':
-            hashost = 1
-            break
-    if hashost == 0:
-        print('NO HOST')
-        obj[num][1]['option-data'].append({'space': 'dhcp4', 'name': 'host-name', 'code': 12, 'data': ''})
-        store['host-name'] = store['hostname']
+            if 'name' in i:
+                store[i['name']] = i['data']
+                #if i['name'] == 'domain-name':
+                #    print(i['data'])
+            if 'user-context' in i:
+                store['user-context'] = i['user-context']
+    
     #print('store',store)
     while True:
         
