@@ -42,12 +42,26 @@ def is_valid(field,val):
             return True
         print('Spaces not allowed in Hostname')
 
+    if field == 'host-name':
+        if " " not in val:
+            return True
+        print('Spaces not allowed in Hostname')
+    
     if field == 'ip-address':
+        er = f"IP {val} not formatted correctly"
+        x = val.split('.')
+        try:
+            assert len(x) % 2 == 0
+        except:
+            print(er)
+            return
+
         try:
             socket.inet_aton(val)
             return True
         except socket.error:
-             print(f"IP {val} not formatted correctly")
+            print(er)
+
     if field == 'hw-address':
         allowed = re.compile(r"""
                              (
