@@ -11,6 +11,7 @@ from valid import *
 from option_data_valid import *
 import readwriteconfig as CF
 from tabulate import tabulate
+import datetime
 
 
 configfile = 'parse.conf'
@@ -253,19 +254,20 @@ def edit_record(resv,host,num):
     store['hw-address'] = list(obj)[num][1]['hw-address']
     store['ip-address'] = list(obj)[num][1]['ip-address']
     
-   
     #print(len(list(obj[num])[1]['option-data']))
     for i in list(obj[num])[1]['option-data']:
-            #print(i['name'])
             if 'name' in i:
                 store[i['name']] = i['data']
-                #if i['name'] == 'domain-name':
-                #    print(i['data'])
+                if i['name'] == 'host-name':
+                    if i['data'] == '':
+                        store['host-name'] = store['hostname']
             if 'user-context' in i:
                 store['user-context'] = i['user-context']
+    #print(store)
     clears()
     border_text(title)
     show_store_dict(store) 
+    #quit()
     #print('store',store)
     # Fields for promptuser_options list [ selection option] [store value] [validation type] [pretty prompt] [needs dup check] 
     promptuser_options ={'d':['[d]elete'],'s':['[s]ave'],'q':['[q]uit'],'h':['[h]ostname','hostname','hostname','Hostname',1],'i':['[i]p','ip-address','ip-address','IP Address',1],
@@ -281,12 +283,14 @@ def edit_record(resv,host,num):
             #print('YES')
             if res == 'w':
                 show_store_dict(store)
+                continue
+            if res == 's':
+                save_record(store,num,resv)
             print(store[promptuser_options[res][1]])
             ans = verify_new_record_input(promptuser_options[res][3],promptuser_options[res][2],resv,promptuser_options[res][4])
-            print('Answer ',ans)
             if not ans == 'q':
                 store[promptuser_options[res][1]] = ans
-        quit()    
+        '''quit()    
         
         if res == 'd':
             ans = input('Delete record? y/n\n')
@@ -303,18 +307,24 @@ def edit_record(resv,host,num):
             n = 'domain-name'
             print(store[n])
             v = get_edit_input(n)
-            store[n] = v
+            store[n] = v '''
         
-            
-                      
-        if res == 's':
-            show_store_dict(store)
-            answer = get_user_input("Are you sure you want to save?\ny to save\nEnter/Return to continue\n" )
-            if answer.lower() == 'y':
-                print('Saving Record')
-                obj[num][1]['ip-address'] = store['ip-address']
-                #list(obj[num])[1]['hostname'] = 'wled2fred'
-                #write_json(resv)
+def save_record(record,num,resv):            
+    obj = list(enumerate(resv['Dhcp4']['reservations']))
+    #show_store_dict(record)
+    answer = get_user_input("Save Record?\ny to save\nEnter/Return to continue\n" )
+    if answer.lower() == 'y':
+        print('Saving Record')
+        print(obj[num][1]['option-data'])
+        for i in obj[num][1]['option-data']:
+            if not 'user-context' in i:
+                print(record[i['name']])
+        quit()
+        obj[num][1]['ip-address'] = record['ip-address']
+        obj[num][1]['option-data']['host-name'] = record['host-name']
+        #filedate = (time.strftime("%Y_%m_%d"))
+        #list(obj[num])[1]['hostname'] = 'wled2fred'
+        write_json(resv)
         #print(obj[num].hostname)
         #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
 
