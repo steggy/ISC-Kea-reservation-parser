@@ -11,7 +11,7 @@ from valid import *
 from option_data_valid import *
 import readwriteconfig as CF
 from tabulate import tabulate
-import datetime
+from datetime import datetime
 
 
 configfile = 'parse.conf'
@@ -121,6 +121,16 @@ def parse_reservation(resv):
     print(x)
     print(type(x))
     write_json(resv)
+
+def display_single_record(resv,num):
+    obj = list(enumerate(resv['Dhcp4']['reservations']))
+    for i in obj[num][1]:
+        if 'option-data' not in i:
+            print(f"{i}: {obj[num][1][i]}")
+        else:
+            for n in obj[num][1]['option-data']:
+                print(n)
+
 
 def search_record(resv):
     result = []
@@ -312,18 +322,32 @@ def edit_record(resv,host,num):
 def save_record(record,num,resv):            
     obj = list(enumerate(resv['Dhcp4']['reservations']))
     #show_store_dict(record)
+    clears()
+    now = datetime.now()
+    dte = now.strftime("%Y-%m-%d_%H:%M")
+    #print(dte)
+    border_text(title)
+    print('Saving Record')
+    obj[num][1]['hostname'] = record['hostname']
+    obj[num][1]['ip-address'] = record['ip-address']
+    obj[num][1]['hw-address'] = record['hw-address']
+    #print(obj[num][1]['option-data'])
+    for i in obj[num][1]['option-data']:
+        if not 'user-context' in i:
+            #print(record[i['name']])
+            i['data'] = record[i['name']]
+            #print(i)
+            if i['name'] == 'host-name':
+                i['data'] = record['hostname']
+        else:
+            i['last-modified'] = dte
+    print('STORE',record)
+    print(obj[num][1])
+    display_single_record(resv,num)
+    quit()
     answer = get_user_input("Save Record?\ny to save\nEnter/Return to continue\n" )
-    if answer.lower() == 'y':
-        print('Saving Record')
-        print(obj[num][1]['option-data'])
-        for i in obj[num][1]['option-data']:
-            if not 'user-context' in i:
-                print(record[i['name']])
-        quit()
-        obj[num][1]['ip-address'] = record['ip-address']
-        obj[num][1]['option-data']['host-name'] = record['host-name']
-        #filedate = (time.strftime("%Y_%m_%d"))
-        #list(obj[num])[1]['hostname'] = 'wled2fred'
+    if answer.lower() == 'y':   
+        
         write_json(resv)
         #print(obj[num].hostname)
         #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
@@ -354,6 +378,7 @@ def main():
     res = get_file()
     #parse_reservation(res)
     clears()
+    
     while True:
         border_text(title)
         answer = get_user_input(f"\nchoose:\n[l]ist/edit [s]earch [a]dd [q]uit\n ")
