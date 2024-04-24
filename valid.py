@@ -98,6 +98,26 @@ def dup_check(data,field,query):
             #print(val[field])
             return True
 
+
+def UniqFile(fn):
+    if os.path.isfile(fn):
+        filename, extension = os.path.splitext(fn)
+        expand = 1
+        while True:
+            #expand += 1
+            new_file_name = fn.split(extension)[0] + str(expand) + extension
+            if os.path.isfile(new_file_name):
+                expand += 1
+                continue
+            else:
+                return new_file_name
+    else:
+        return fn
+
+
+
+
+
 #EOF
 
 

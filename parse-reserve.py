@@ -16,7 +16,7 @@ from datetime import datetime
 
 configfile = 'parse.conf'
 title = f"Basic isc-kea reservation editing ver {CHECKVERSION}"
-
+PipeLineFile = 'pipe-kea-dhcp4.conf'
 headers = {
     'Content-Type': 'application/json',
 }
@@ -93,7 +93,8 @@ def get_file():
     return d
 
 def write_json(res):
-    with open('data.json', 'w') as file:
+    fn = UniqFile(PipeLineFile)
+    with open(fn, 'w') as file:
         json.dump(res, file, indent=4)
 
 
@@ -229,8 +230,6 @@ def verify_new_record_input(prompt,field,resv,dup = 0):
 def add_record_info(resv):
     newstore = {}
     newstore['hostname'] = verify_new_record_input('Hostname','hostname',resv,1)
-    #if answer : newstore['hostname'] = answer
-    print(configdict)
     answer = verify_new_record_input('IP Address','ip-address',resv,1)
     if answer : newstore['ip-address'] = answer
     
@@ -246,11 +245,27 @@ def add_record_info(resv):
         if ans.lower() == 'k':
             newstore[i[0]] = configdict[i[0]]
         else:
-            newstore[i[0]] = verify_new_record_input(i[1],i[2])
-    
+            newstore[i[0]] = verify_new_record_input(i[1],i[2],resv)
+    newstore['host-name'] = newstore['hostname'] 
+    clears()
+    border_text(title)
     for key in newstore:
         print(key, ":", newstore[key])
-    print(newstore)
+    ans = input('\nConfirm add record: y/n\n').lower()
+    if ans == 'y':
+        now = datetime.now()
+        dte = now.strftime("%Y-%m-%d_%H:%M")
+        od = []
+        optdata = [['host-name',12],['domain-name-servers',6],['domain-name',15],['broadcast-address',28],['subnet-mask',1],['routers',3]]
+        for i in optdata:
+            od.append({'space': 'dhcp4', 'name': i[0], 'code': i[1], 'data': newstore[i[0]]})
+        od.append({'user-context':{'comment':'','last-modified':dte,'description':''}})
+        vals = {'hostname':newstore['hostname'],'hw-address':newstore['hw-address'],'ip-address':newstore['ip-address'],
+                'option-data':od
+                }
+        resv['Dhcp4']['reservations'].append(vals)
+        write_json(resv)     
+        clears()
     
 
 def edit_record(resv,host,num):
