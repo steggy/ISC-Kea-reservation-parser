@@ -17,31 +17,6 @@ from datetime import datetime
 configfile = 'parse.conf'
 title = f"Basic isc-kea reservation editing ver {CHECKVERSION}"
 PipeLineFile = 'pipe-kea-dhcp4.conf'
-headers = {
-    'Content-Type': 'application/json',
-}
-
-
-json_data = {
-    'command': 'lease4-get-all',
-    'service': [
-        'dhcp4',
-    ],
-}
-
-json_data2 = {
-    "command": "reservation-get-all",
-    "arguments": {
-        "subnet-id": 1
-    },
-    'service': [
-        'dhcp4',
-    ],
-}
-
-
-
-
 
 def init():
     global configdict
@@ -130,7 +105,8 @@ def display_single_record(resv,num):
             print(f"{i}: {obj[num][1][i]}")
         else:
             for n in obj[num][1]['option-data']:
-                print(n)
+                if 'user-context' not in n:
+                    print(n['name'])
 
 
 def search_record(resv):
@@ -139,7 +115,6 @@ def search_record(resv):
     x = resv['Dhcp4']['reservations']
     for idx,row in enumerate(x):
         if query in row['hostname']:
-            #d = {idx,row['hostname']}
             result.append([idx,row['hostname'],row['ip-address']])
     if len(result) < 1:
         print('Record not found')
@@ -171,8 +146,6 @@ def parse_single(record):
         for i in record['option-data']:
             if 'name' in i:
                 print(f"{str(i['name']).ljust(pad,' ')}:{i['data']}")
-            #for key in i:
-            #    printf(key, "->", i[key], end =" ")
     else:
         print('Adding "option-data" for the use of "comment" field')
     print(f"{'=' * 30}")    
@@ -266,12 +239,12 @@ def add_record_info(resv):
         resv['Dhcp4']['reservations'].append(vals)
         write_json(resv)     
         clears()
+        return resv
+    return resv
     
 
 def edit_record(resv,host,num):
-    #store = {'hostname':'','mac':'','ip':'','domain-name-servers':'','domain-name':'','broadcast-address':'','subnet-mask':'','routers':'','host-name':''}
     store = {}
-
             
     valid_option_data(resv,num)        
     obj = list(enumerate(resv['Dhcp4']['reservations']))
@@ -292,8 +265,6 @@ def edit_record(resv,host,num):
     clears()
     border_text(title)
     show_store_dict(store) 
-    #quit()
-    #print('store',store)
     # Fields for promptuser_options list [ selection option] [store value] [validation type] [pretty prompt] [needs dup check] 
     promptuser_options ={'d':['[d]elete'],'s':['[s]ave'],'q':['[q]uit'],'h':['[h]ostname','hostname','hostname','Hostname',1],'i':['[i]p','ip-address','ip-address','IP Address',1],
                          'm':['[m]ac','hw-address','hw-address','MAC',1],'r':['[r]outer','routers','ip-address','Router',0],'k':['mas[k]','subnet-mask','ip-address','Subnet Mask',0],
@@ -307,14 +278,23 @@ def edit_record(resv,host,num):
                 break
             #print('YES')
             if res == 'w':
+                clears()
+
                 show_store_dict(store)
                 continue
             if res == 's':
-                save_record(store,num,resv)
+                resv = save_record(store,num,resv)
+                return resv
+            if res == 'd':
+                ans = input('Delete record? y/n\n')
+                if ans.lower() == 'y':
+                    del resv['Dhcp4']['reservations'][num]
+                    return resv
             print(store[promptuser_options[res][1]])
-            ans = verify_new_record_input(promptuser_options[res][3],promptuser_options[res][2],resv,promptuser_options[res][4])
-            if not ans == 'q':
-                store[promptuser_options[res][1]] = ans
+            if res in promptuser_options:
+                ans = verify_new_record_input(promptuser_options[res][3],promptuser_options[res][2],resv,promptuser_options[res][4])
+                if not ans == 'q':
+                    store[promptuser_options[res][1]] = ans
         '''quit()    
         
         if res == 'd':
@@ -340,32 +320,31 @@ def save_record(record,num,resv):
     clears()
     now = datetime.now()
     dte = now.strftime("%Y-%m-%d_%H:%M")
+    record['host-name'] = record['hostname']
     #print(dte)
     border_text(title)
-    print('Saving Record')
-    obj[num][1]['hostname'] = record['hostname']
-    obj[num][1]['ip-address'] = record['ip-address']
-    obj[num][1]['hw-address'] = record['hw-address']
-    #print(obj[num][1]['option-data'])
-    for i in obj[num][1]['option-data']:
-        if not 'user-context' in i:
-            #print(record[i['name']])
-            i['data'] = record[i['name']]
-            #print(i)
-            if i['name'] == 'host-name':
-                i['data'] = record['hostname']
-        else:
-            i['last-modified'] = dte
-    print('STORE',record)
-    print(obj[num][1])
-    display_single_record(resv,num)
-    quit()
+    for key in record:
+        print(f"{key}: {record[key]}")
     answer = get_user_input("Save Record?\ny to save\nEnter/Return to continue\n" )
     if answer.lower() == 'y':   
-        
+        print('Saving Record')
+        obj[num][1]['hostname'] = record['hostname']
+        obj[num][1]['ip-address'] = record['ip-address']
+        obj[num][1]['hw-address'] = record['hw-address']
+        for i in obj[num][1]['option-data']:
+            if not 'user-context' in i:
+                #print(record[i['name']])
+                i['data'] = record[i['name']]
+                #print(i)
+                if i['name'] == 'host-name':
+                    i['data'] = record['hostname']
+            else:
+                i['user-context']['last-modified'] = dte
+        print(obj[num][1])
         write_json(resv)
-        #print(obj[num].hostname)
-        #    print(list(enumerate(resv['Dhcp4']['reservations'][num][0]['hostname'])))
+        return resv
+    else:
+        return resv
 
 
 def show_store_dict(dict):
@@ -404,17 +383,7 @@ def main():
         if answer == 's':
             search_record(res)  
         if answer == 'a':
-            add_record_info(res)
-            #add record
-            #print(len(res['Dhcp4']['reservations']))
-            #print(res['Dhcp4']['reservations'][*]['hostname'])
-            #quit()
-            
-            #anw = input('Enter test data\n')
-            ##tres = dup_check(res,'hostname',anw)
-            #tres = dup_check(res,'ip-address',anw)
-            #print(tres)
-            #pass
+            res = add_record_info(res)
         if answer == 'q':
             quit()
 
