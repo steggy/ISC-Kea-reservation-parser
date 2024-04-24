@@ -32,8 +32,6 @@ The file must be in the kea-dhcp4.conf format
 Steggy
 steggy@gmail.com
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
 
 ## Version History
 
