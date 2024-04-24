@@ -69,9 +69,9 @@ def get_file():
 
 def write_json(res):
     fn = UniqFile(PipeLineFile)
-    with open(fn, 'w') as file:
+    with open(fn, 'x') as file:
         json.dump(res, file, indent=4)
-
+    file.close()
 
 
 
@@ -289,31 +289,14 @@ def edit_record(resv,host,num):
                 ans = input('Delete record? y/n\n')
                 if ans.lower() == 'y':
                     del resv['Dhcp4']['reservations'][num]
+                    write_json(resv)
                     return resv
             print(store[promptuser_options[res][1]])
             if res in promptuser_options:
                 ans = verify_new_record_input(promptuser_options[res][3],promptuser_options[res][2],resv,promptuser_options[res][4])
                 if not ans == 'q':
                     store[promptuser_options[res][1]] = ans
-        '''quit()    
-        
-        if res == 'd':
-            ans = input('Delete record? y/n\n')
-            if ans.lower() == 'y':
-                #obj = list(enumerate(resv['Dhcp4']['reservations']))
-                #list(obj)[num]
-                list(enumerate(resv['Dhcp4']['reservations'])).pop(num)
-                resv['Dhcp4']['reservations'].pop(num)
-                print(resv['Dhcp4']['reservations'])
-                obj.pop(num)
-                #print(obj)
-                write_json(resv)
-        if res == 'o':
-            n = 'domain-name'
-            print(store[n])
-            v = get_edit_input(n)
-            store[n] = v '''
-        
+                
 def save_record(record,num,resv):            
     obj = list(enumerate(resv['Dhcp4']['reservations']))
     #show_store_dict(record)
