@@ -111,16 +111,27 @@ def display_single_record(resv,num):
 
 def search_record(resv):
     result = []
-    query = input('Enter search:\n')
+    querytype = {'h':'hostname','i':'ip-address','m':'hw-address'}
+    q = ''
+    query = input('Type query for hostaname or "return" for IP:\n')
+    q = 'h'
+    if query == "":
+        query = input('Type query for IP or "return" for MAC:\n')
+        q = 'i'
+        if query == '':
+            query = input('Type query for MAC or "return" for All:\n')
+            q = 'm'
+    
+
     x = resv['Dhcp4']['reservations']
     for idx,row in enumerate(x):
-        if query in row['hostname']:
-            result.append([idx,row['hostname'],row['ip-address']])
+        if query in row[querytype[q]]:
+            result.append([idx,row['hostname'],row['ip-address'],row['hw-address']])
     if len(result) < 1:
         print('Record not found')
         return
     for idx,val in enumerate(result):
-        print(f"{str(idx + 1).rjust(3, ' ')}) {val[1]} {val[2]}")
+        print(f"{str(idx + 1).rjust(3, ' ')}) {val[1]} {val[2]} {val[3]}")
     answer = input('Enter number to edit:\n ')
     try:
         num = int(answer)
