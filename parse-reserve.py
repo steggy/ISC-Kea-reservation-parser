@@ -243,7 +243,7 @@ def add_record_info(resv):
         optdata = [['host-name',12],['domain-name-servers',6],['domain-name',15],['broadcast-address',28],['subnet-mask',1],['routers',3]]
         for i in optdata:
             od.append({'space': 'dhcp4', 'name': i[0], 'code': i[1], 'data': newstore[i[0]]})
-        od.append({'user-context':{'comment':'','last-modified':dte,'description':''}})
+        od.append({'user-context':{'comment':'Record added','last-modified':dte,'description':''}})
         vals = {'hostname':newstore['hostname'],'hw-address':newstore['hw-address'],'ip-address':newstore['ip-address'],
                 'option-data':od
                 }
@@ -259,20 +259,26 @@ def edit_record(resv,host,num):
             
     valid_option_data(resv,num)        
     obj = list(enumerate(resv['Dhcp4']['reservations']))
+    print('list obj',list(obj)[num][1]['hostname'])
+    print('obj',obj[num][1]['hostname'])
+
     store['hostname'] = list(obj)[num][1]['hostname']        
     store['hw-address'] = list(obj)[num][1]['hw-address']
     store['ip-address'] = list(obj)[num][1]['ip-address']
     
     #print(len(list(obj[num])[1]['option-data']))
+    #print('OBJECT ',obj[num][1]['option-data'])
     for i in list(obj[num])[1]['option-data']:
-            if 'name' in i:
-                store[i['name']] = i['data']
-                if i['name'] == 'host-name':
-                    if i['data'] == '':
-                        store['host-name'] = store['hostname']
-            if 'user-context' in i:
-                store['user-context'] = i['user-context']
-    #print(store)
+        print(i)
+        if 'name' in i:
+            store[i['name']] = i['data']
+            if i['name'] == 'host-name':
+                if i['data'] == '':
+                    store['host-name'] = store['hostname']
+        if 'user-context' in i:
+            print('I SEE\n\n')
+            store['user-context'] = i['user-context']
+    print(store)
     clears()
     border_text(title)
     show_store_dict(store) 
@@ -334,6 +340,7 @@ def save_record(record,num,resv):
                     i['data'] = record['hostname']
             else:
                 i['user-context']['last-modified'] = dte
+                i['user-context']['comment'] = 'Record edited'
         print(obj[num][1])
         write_json(resv)
         return resv
