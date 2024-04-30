@@ -16,7 +16,7 @@ def valid_option_data(records,num):
                 chk = 'y'
         if chk == 'n':
             list(obj[num])[1]['option-data'].append({'user-context':{'comment':'','last-modified':'','description':''}})
-            else:
+    else:
         print('NO OPTION-DATA')
         list(obj)[num][1]['option-data'] = [{'space': 'dhcp4', 'name': 'host-name', 'code': 12, 'data': ''}]
         list(obj)[num][1]['option-data'].append({"space": "dhcp4","name": "domain-name-servers","code": 6,"data": ""})
