@@ -1,9 +1,9 @@
 #! /usr/bin/python3
 #
 # Author steggy
-# ver 0.1
+# ver 0.2
 # Basic editing of isc-kea reservations
-CHECKVERSION = "0.1"
+CHECKVERSION = "0.2"
 
 import os, sys, re, json, requests, platform, socket 
 import pprint
