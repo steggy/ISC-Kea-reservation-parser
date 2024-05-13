@@ -226,6 +226,8 @@ def add_record_info(resv):
                    ['routers','Router','ip-address','[k]eep - [return] to continue:']] 
     for i in optionsdata:
         ans = input(f"{i[1]}: {configdict[i[0]]}\n{i[3]}:\n")
+        if ans.lower() == 'q':
+            break
         if ans.lower() == 'k':
             newstore[i[0]] = configdict[i[0]]
         else:
@@ -243,9 +245,8 @@ def add_record_info(resv):
         optdata = [['host-name',12],['domain-name-servers',6],['domain-name',15],['broadcast-address',28],['subnet-mask',1],['routers',3]]
         for i in optdata:
             od.append({'space': 'dhcp4', 'name': i[0], 'code': i[1], 'data': newstore[i[0]]})
-        od.append({'user-context':{'comment':'Record added','last-modified':dte,'description':''}})
         vals = {'hostname':newstore['hostname'],'hw-address':newstore['hw-address'],'ip-address':newstore['ip-address'],
-                'option-data':od
+                'user-context':{'comment': 'add record', 'last-modified': dte, 'description': ''},'option-data':od
                 }
         resv['Dhcp4']['reservations'].append(vals)
         write_json(resv)     
@@ -265,9 +266,9 @@ def edit_record(resv,host,num):
     store['hostname'] = list(obj)[num][1]['hostname']        
     store['hw-address'] = list(obj)[num][1]['hw-address']
     store['ip-address'] = list(obj)[num][1]['ip-address']
+    store['user-context'] = list(obj)[num][1]['user-context']
+
     
-    #print(len(list(obj[num])[1]['option-data']))
-    #print('OBJECT ',obj[num][1]['option-data'])
     for i in list(obj[num])[1]['option-data']:
         print(i)
         if 'name' in i:
@@ -275,9 +276,6 @@ def edit_record(resv,host,num):
             if i['name'] == 'host-name':
                 if i['data'] == '':
                     store['host-name'] = store['hostname']
-        if 'user-context' in i:
-            print('I SEE\n\n')
-            store['user-context'] = i['user-context']
     print(store)
     clears()
     border_text(title)
@@ -286,7 +284,7 @@ def edit_record(resv,host,num):
     promptuser_options ={'d':['[d]elete'],'s':['[s]ave'],'q':['[q]uit'],'h':['[h]ostname','hostname','hostname','Hostname',1],'i':['[i]p','ip-address','ip-address','IP Address',1],
                          'm':['[m]ac','hw-address','hw-address','MAC',1],'r':['[r]outer','routers','ip-address','Router',0],'k':['mas[k]','subnet-mask','ip-address','Subnet Mask',0],
                          'b':['[b]road-cast','broadcast-address','ip-address','Broadcast Address',0],'o':['d[o]main-name-server','domain-name-servers','ip-address','DNS',0],
-                         'n':['domai[n]-name','domain-name','hostname','Domain name',0],'w':['sho[w]-record']}
+                         'n':['domai[n]-name','domain-name','hostname','Domain name',0],'t':['descrip[t]ion','user-context','description','description',0],'w':['sho[w]-record']}
     print(list(promptuser_options)[0])
     while True:    
         res = input(f"{' '.join([str(promptuser_options[i][0]) for i in promptuser_options])}:\nEdit?\n").lower()
@@ -331,16 +329,13 @@ def save_record(record,num,resv):
         obj[num][1]['hostname'] = record['hostname']
         obj[num][1]['ip-address'] = record['ip-address']
         obj[num][1]['hw-address'] = record['hw-address']
+        obj[num][1]['user-context'] = record['user-context']
+        obj[num][1]['user-context']['comment'] = 'Record edited'
+        obj[num][1]['user-context']['last-modified'] = dte
         for i in obj[num][1]['option-data']:
-            if not 'user-context' in i:
-                #print(record[i['name']])
-                i['data'] = record[i['name']]
-                #print(i)
-                if i['name'] == 'host-name':
-                    i['data'] = record['hostname']
-            else:
-                i['user-context']['last-modified'] = dte
-                i['user-context']['comment'] = 'Record edited'
+            i['data'] = record[i['name']]
+            if i['name'] == 'host-name':
+                i['data'] = record['hostname']
         print(obj[num][1])
         write_json(resv)
         return resv
