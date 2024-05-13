@@ -19,6 +19,7 @@ tabulate
 ### Installing
 
 Clone the repo
+
 Adjust the default setting in parse.conf file
 
 
