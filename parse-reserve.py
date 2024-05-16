@@ -323,13 +323,13 @@ def save_record(record,num,resv):
     border_text(title)
     for key in record:
         print(f"{key}: {record[key]}")
-    answer = get_user_input("Save Record?\ny to save\nEnter/Return to continue\n" )
+    answer = get_user_input(f"{'-' * 25}\nSave Record? y or Return to continue\n" )
     if answer.lower() == 'y':   
         print('Saving Record')
         obj[num][1]['hostname'] = record['hostname']
         obj[num][1]['ip-address'] = record['ip-address']
         obj[num][1]['hw-address'] = record['hw-address']
-        obj[num][1]['user-context'] = record['user-context']
+        obj[num][1]['user-context']['description'] = record['user-context']
         obj[num][1]['user-context']['comment'] = 'Record edited'
         obj[num][1]['user-context']['last-modified'] = dte
         for i in obj[num][1]['option-data']:

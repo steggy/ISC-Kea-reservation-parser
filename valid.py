@@ -46,7 +46,9 @@ def is_valid(field,val):
         if " " not in val:
             return True
         print('Spaces not allowed in Hostname')
-    
+    if field == 'description':
+        return True
+
     if field == 'ip-address':
         er = f"IP {val} not formatted correctly"
         x = val.split('.')
