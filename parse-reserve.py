@@ -22,6 +22,7 @@ def init():
     global configdict
     global configlist
     global ver 
+    global renamefile
     
     wd = os.path.dirname(os.path.abspath(__file__)) + '/' + configfile
     if not is_valid_file(wd):
@@ -31,6 +32,7 @@ def init():
         configdict = dict(CF.Config(wd).Fetch('dataoptions'))
         configlist = list(configdict.values())
         ver = str(CF.Config(wd).Fetch('version')[0][1])
+        renamefile = str(CF.Config(wd).Fetch('store')[0][1])
         return True
     except Exception as e:
         print(str(e))
@@ -68,10 +70,15 @@ def get_file():
     return d
 
 def write_json(res):
-    fn = UniqFile(PipeLineFile)
-    with open(fn, 'x') as file:
-        json.dump(res, file, indent=4)
-    file.close()
+    if renamefile == 'yes':
+        fn = UniqFile(PipeLineFile)
+        with open(fn, 'x') as file:
+            json.dump(res, file, indent=4)
+        file.close()
+    if renamefile == 'no':
+        with open(keajson, 'w') as file:
+            json.dump(res,file, indent=4)
+        file.close()    
 
 
 
