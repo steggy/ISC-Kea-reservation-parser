@@ -336,7 +336,10 @@ def save_record(record,num,resv):
         obj[num][1]['hostname'] = record['hostname']
         obj[num][1]['ip-address'] = record['ip-address']
         obj[num][1]['hw-address'] = record['hw-address']
-        obj[num][1]['user-context']['description'] = record['user-context']
+        if record['user-context']:
+            obj[num][1]['user-context']['description'] = record['user-context']
+        else:
+            obj[num][1]['user-context']['description'] = ''
         obj[num][1]['user-context']['comment'] = 'Record edited'
         obj[num][1]['user-context']['last-modified'] = dte
         for i in obj[num][1]['option-data']:
