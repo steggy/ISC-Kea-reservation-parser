@@ -1,9 +1,8 @@
 #! /usr/bin/python3
 #
 # Author steggy
-# ver 0.2
 # Basic editing of isc-kea reservations
-CHECKVERSION = "0.2"
+CHECKVERSION = "0.3"
 
 import os, sys, re, json, requests, platform, socket 
 import pprint
@@ -70,6 +69,7 @@ def get_file():
     return d
 
 def write_json(res):
+    print('writing')
     if renamefile == 'yes':
         fn = UniqFile(PipeLineFile)
         with open(fn, 'x') as file:
@@ -336,12 +336,14 @@ def save_record(record,num,resv):
         obj[num][1]['hostname'] = record['hostname']
         obj[num][1]['ip-address'] = record['ip-address']
         obj[num][1]['hw-address'] = record['hw-address']
-        if record['user-context']:
+        res = type(record['user-context']) == str
+        if res:
             obj[num][1]['user-context']['description'] = record['user-context']
         else:
-            obj[num][1]['user-context']['description'] = ''
+            obj[num][1]['user-context']['description'] = record['user-context']['description']
         obj[num][1]['user-context']['comment'] = 'Record edited'
         obj[num][1]['user-context']['last-modified'] = dte
+        print('BEFORE DATA')
         for i in obj[num][1]['option-data']:
             i['data'] = record[i['name']]
             if i['name'] == 'host-name':
